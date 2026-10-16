@@ -15,6 +15,15 @@ export function configureCloudKey() {
     return false;
   }
   localStorage.setItem(API_KEY_STORAGE, key.trim());
+  const defaultSaveKey = localStorage.getItem(SAVE_KEY_STORAGE) || globalThis.crypto?.randomUUID?.() || `wl-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const saveKey = globalThis.prompt("Cloud-Spielstand-Code (auf anderen Geräten denselben Code verwenden; bitte sicher aufbewahren):", defaultSaveKey);
+  if (saveKey === null) return false;
+  if (!saveKey.trim()) {
+    globalThis.alert("Der Cloud-Spielstand-Code darf nicht leer sein.");
+    return false;
+  }
+  if (localStorage.getItem(SAVE_KEY_STORAGE) !== saveKey.trim()) localStorage.removeItem(DOC_ID_STORAGE);
+  localStorage.setItem(SAVE_KEY_STORAGE, saveKey.trim());
   return true;
 }
 function apiKey() { return localStorage.getItem(API_KEY_STORAGE) || ""; }
