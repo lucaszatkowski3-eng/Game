@@ -1,0 +1,39 @@
+name: Build WILDLANDS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'vite.config.js'
+      - 'electron/**'
+      - '.github/workflows/build.yml'
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+          - os: ubuntu-latest
+            label: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run desktop:dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wildlands-${{ matrix.label }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
