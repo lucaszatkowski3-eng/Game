@@ -3,13 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'index.html'
-      - 'package.json'
-      - 'vite.config.js'
-      - 'electron/**'
-      - '.github/workflows/build.yml'
+    paths: ['src/**', 'index.html', 'package.json', 'vite.config.js', 'electron/**', '.github/workflows/build.yml']
 permissions:
   contents: read
 jobs:
@@ -28,7 +22,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm install
       - run: npm run desktop:dist
       - uses: actions/upload-artifact@v4
