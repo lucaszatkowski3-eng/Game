@@ -5,7 +5,7 @@
   "description":"WILDLANDS 3D open-world survival",
   "type":"module",
   "main":"electron/main.cjs",
-  "scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0","desktop":"npm run build && electron .","desktop:dist":"npm run build && electron-builder"},
+  "scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0","desktop":"npm run build && electron .","desktop:dist":"npm run build && electron-builder --publish never"},
   "dependencies":{"three":"^0.180.0","express":"^4.21.2"},
   "devDependencies":{"vite":"^7.0.6","electron":"^37.2.6","electron-builder":"^26.0.12"},
   "build":{"appId":"com.lucaszatkowski.wildlands","productName":"WILDLANDS Survival","directories":{"output":"release"},"files":["dist/**/*","electron/**/*","package.json"],"win":{"target":["nsis","zip"]},"linux":{"target":["AppImage"]}}
