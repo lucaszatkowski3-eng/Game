@@ -1,4 +1,3 @@
-import { saveCloudSnapshot, loadCloudSnapshot } from './nimbase.js';
 import * as THREE from 'three';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -11,7 +10,7 @@ export class WildlandsGame{
   this.camera=new THREE.PerspectiveCamera(this.settings.fov,innerWidth/innerHeight,.1,650);this.camera.position.set(0,2,10);
   this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
   this.clock=new THREE.Clock();this.keys={};this.objects=[];this.resources={wood:0,stone:0,berries:0};this.stats={health:100,hunger:100,thirst:100};this.dayTime=.32;this.day=1;this.elapsed=0;this.started=false;this.paused=true;this.selected=0;this.fireBuilt=false;this.lastUI=0;this.toastUntil=0;this.lastGather=null;this.velocityY=0;this.onGround=true;this.yaw=0;this.pitch=0;this.pointerLocked=false;this.worldSeed=427;
-  this.cloudReady=false;this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();if(localStorage.getItem('wildlands-nimbase-api-key'))setTimeout(()=>this.syncCloud(),700);
+  this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();
  }
  loadPreferences(){try{const p=JSON.parse(localStorage.getItem('wildlands-preferences')||'null');if(p){Object.assign(this.settings,p.settings||{});Object.assign(this.controls,p.controls||{});}}catch{}}
  savePreferences(){try{localStorage.setItem('wildlands-preferences',JSON.stringify({settings:this.settings,controls:this.controls}));}catch{}}
@@ -126,20 +125,9 @@ export class WildlandsGame{
    const wasPaused=this.paused;this.paused=false;this.buildFire();this.paused=wasPaused;this.resources.wood=wood;this.resources.stone=stone;
   }
   this.updateUI();
- }
- async syncCloud(){
-  this.onUI({type:'toast',message:'NIMBASE: SPIELSTAND WIRD GELADEN…'});
-  const snapshot=await loadCloudSnapshot();
-  if(snapshot){this.applySnapshot(snapshot);try{localStorage.setItem('wildlands-save',JSON.stringify(this.snapshot()));}catch{}this.cloudReady=true;this.onUI({type:'toast',message:'CLOUD-SPIELSTAND GELADEN'});return true;}
-  this.cloudReady=true;
-  const result=await saveCloudSnapshot(this.snapshot());
-  this.onUI({type:'toast',message:result.ok?'CLOUD-SPEICHER VERBUNDEN':'CLOUD-FEHLER: '+result.message});
-  return result.ok;
- }
- saveLocal(){
+ } saveLocal(){
   const data=this.snapshot();
-  try{localStorage.setItem('wildlands-save',JSON.stringify(data));this.onUI({type:'saved'});}catch{}
-  if(this.cloudReady){saveCloudSnapshot(data).then(result=>{if(result.ok)this.onUI({type:'cloud-saved',message:result.message});else if(!/Kein NimBase-Schlüssel/.test(result.message||''))this.onUI({type:'cloud-error',message:result.message});});}
+  try{localStorage.setItem('wildlands-save',JSON.stringify(data));this.onUI({type:'saved'});}catch{});}
  }
  loadLocal(){
   try{const d=JSON.parse(localStorage.getItem('wildlands-save')||'null');if(d)this.applySnapshot(d);}catch{}
