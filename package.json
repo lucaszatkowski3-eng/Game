@@ -1,0 +1,31 @@
+{
+  "name": "wildlands-survival",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wildlands — 3D open-world survival prototype",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "desktop": "electron .",
+    "desktop:dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "vite": "^7.0.6"
+  },
+  "build": {
+    "appId": "com.lucaszatkowski.wildlands",
+    "productName": "WILDLANDS Survival",
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "win": { "target": ["nsis", "zip"] },
+    "linux": { "target": ["AppImage"] }
+  }
+}
