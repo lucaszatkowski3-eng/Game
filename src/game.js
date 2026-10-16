@@ -1,3 +1,4 @@
+import { saveCloudSnapshot, loadCloudSnapshot } from './nimbase.js';
 import * as THREE from 'three';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -10,7 +11,7 @@ export class WildlandsGame{
   this.camera=new THREE.PerspectiveCamera(this.settings.fov,innerWidth/innerHeight,.1,650);this.camera.position.set(0,2,10);
   this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
   this.clock=new THREE.Clock();this.keys={};this.objects=[];this.resources={wood:0,stone:0,berries:0};this.stats={health:100,hunger:100,thirst:100};this.dayTime=.32;this.day=1;this.elapsed=0;this.started=false;this.paused=true;this.selected=0;this.fireBuilt=false;this.lastUI=0;this.toastUntil=0;this.lastGather=null;this.velocityY=0;this.onGround=true;this.yaw=0;this.pitch=0;this.pointerLocked=false;this.worldSeed=427;
-  this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();
+  this.cloudReady=false;this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();
  }
  loadPreferences(){try{const p=JSON.parse(localStorage.getItem('wildlands-preferences')||'null');if(p){Object.assign(this.settings,p.settings||{});Object.assign(this.controls,p.controls||{});}}catch{}}
  savePreferences(){try{localStorage.setItem('wildlands-preferences',JSON.stringify({settings:this.settings,controls:this.controls}));}catch{}}
@@ -112,12 +113,36 @@ export class WildlandsGame{
   const near=this.nearest();this.onUI({type:'ui',resources:{...this.resources},stats:{...this.stats},day:this.day,dayTime:this.dayTime,position:{x:this.player.position.x,z:this.player.position.z},nearest:near?.userData.label||null,selected:this.selected,fireBuilt:this.fireBuilt});
  }
  toast(message){this.onUI({type:'toast',message});}
+ snapshot(){
+  return {resources:{...this.resources},stats:{...this.stats},day:this.day,dayTime:this.dayTime,position:{x:this.player.position.x,y:this.player.position.y,z:this.player.position.z},yaw:this.yaw,pitch:this.pitch,fireBuilt:this.fireBuilt,version:1};
+ }
+ applySnapshot(d){
+  if(!d||typeof d!=='object')return;
+  Object.assign(this.resources,d.resources||{});Object.assign(this.stats,d.stats||{});this.day=d.day||1;this.dayTime=d.dayTime??.32;
+  if(d.position)this.player.position.set(d.position.x,d.position.y,d.position.z);
+  this.yaw=d.yaw||0;this.pitch=d.pitch||0;this.player.rotation.y=this.yaw;this.camera.rotation.x=this.pitch;
+  if(d.fireBuilt&&!this.fireBuilt){
+   const wood=this.resources.wood,stone=this.resources.stone;this.resources.wood=Math.max(wood,5);this.resources.stone=Math.max(stone,3);
+   const wasPaused=this.paused;this.paused=false;this.buildFire();this.paused=wasPaused;this.resources.wood=wood;this.resources.stone=stone;
+  }
+  this.updateUI();
+ }
+ async syncCloud(){
+  this.onUI({type:'toast',message:'NIMBASE: SPIELSTAND WIRD GELADEN…'});
+  const snapshot=await loadCloudSnapshot();
+  if(snapshot){this.applySnapshot(snapshot);try{localStorage.setItem('wildlands-save',JSON.stringify(this.snapshot()));}catch{}this.cloudReady=true;this.onUI({type:'toast',message:'CLOUD-SPIELSTAND GELADEN'});return true;}
+  this.cloudReady=true;
+  const result=await saveCloudSnapshot(this.snapshot());
+  this.onUI({type:'toast',message:result.ok?'CLOUD-SPEICHER VERBUNDEN':'CLOUD-FEHLER: '+result.message});
+  return result.ok;
+ }
  saveLocal(){
-  const data={resources:this.resources,stats:this.stats,day:this.day,dayTime:this.dayTime,position:{x:this.player.position.x,y:this.player.position.y,z:this.player.position.z},yaw:this.yaw,pitch:this.pitch,fireBuilt:this.fireBuilt,version:1};
+  const data=this.snapshot();
   try{localStorage.setItem('wildlands-save',JSON.stringify(data));this.onUI({type:'saved'});}catch{}
+  if(this.cloudReady){saveCloudSnapshot(data).then(result=>{if(result.ok)this.onUI({type:'cloud-saved',message:result.message});else if(!/Kein NimBase-Schlüssel/.test(result.message||''))this.onUI({type:'cloud-error',message:result.message});});}
  }
  loadLocal(){
-  try{const d=JSON.parse(localStorage.getItem('wildlands-save')||'null');if(!d)return;Object.assign(this.resources,d.resources||{});Object.assign(this.stats,d.stats||{});this.day=d.day||1;this.dayTime=d.dayTime??.32;if(d.position){this.player.position.set(d.position.x,d.position.y,d.position.z);}this.yaw=d.yaw||0;this.pitch=d.pitch||0;this.player.rotation.y=this.yaw;this.camera.rotation.x=this.pitch;if(d.fireBuilt){this.resources.wood=Math.max(this.resources.wood,5);this.resources.stone=Math.max(this.resources.stone,3);this.buildFire();}this.updateUI();}catch{}
+  try{const d=JSON.parse(localStorage.getItem('wildlands-save')||'null');if(d)this.applySnapshot(d);}catch{}
  }
  reset(){localStorage.removeItem('wildlands-save');location.reload();}
  animate=()=>{requestAnimationFrame(this.animate);const dt=Math.min(this.clock.getDelta(),.05);this.updateMovement(dt);this.updateSurvival(dt);this.updateEnvironment();if(this.waterGeo){const p=this.waterGeo.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,Math.sin(x*.045+this.elapsed)*.09+Math.cos(z*.06+this.elapsed*.7)*.07);}p.needsUpdate=true;this.waterGeo.computeVertexNormals();}
