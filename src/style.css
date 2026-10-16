@@ -19,3 +19,6 @@
 .bind-key.listening{background:var(--mint);color:#142018;border-color:var(--mint)}
 .settings-close{margin-top:18px}
 @media(max-width:600px){.settings-card{padding:20px;max-height:90vh}.bindings-list{grid-template-columns:1fr}.setting-row{margin:12px 0}.start-settings{max-width:100%}}
+
+/* Enhanced survival HUD */
+.stamina-icon{color:#c6f277}.stamina-fill{background:linear-gradient(90deg,#86bb4b,#d6f58d)}.status-panel{background:linear-gradient(145deg,rgba(13,24,21,.82),rgba(10,18,16,.66));border-color:#dcebd52b}.slot{backdrop-filter:blur(8px)}.objective{background:linear-gradient(145deg,rgba(13,24,21,.82),rgba(10,18,16,.66))}
