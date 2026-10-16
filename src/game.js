@@ -122,7 +122,7 @@ export class WildlandsGame{
   if(this.fire){const f=this.elapsed;this.fire.userData.flame.scale.set(1+Math.sin(f*9)*.09,1+Math.sin(f*12)*.12,1);this.fire.userData.light.intensity=7+Math.sin(f*13)*1.3;}
  }
  updateUI(){
-  const near=this.nearest();this.onUI({type:'ui',resources:{...this.resources},stats:{...this.stats},day:this.day,dayTime:this.dayTime,position:{x:this.player.position.x,z:this.player.position.z},nearest:near?.userData.label||null,selected:this.selected,fireBuilt:this.fireBuilt});
+  const near=this.nearest();this.onUI({type:'ui',resources:{...this.resources},stats:{...this.stats},stamina:this.stamina,day:this.day,dayTime:this.dayTime,position:{x:this.player.position.x,z:this.player.position.z},nearest:near?.userData.label||null,selected:this.selected,fireBuilt:this.fireBuilt});
  }
  toast(message){this.onUI({type:'toast',message});}
  snapshot(){
