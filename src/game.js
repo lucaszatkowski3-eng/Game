@@ -140,7 +140,7 @@ export class WildlandsGame{
   this.updateUI();
  } saveLocal(){
   const data=this.snapshot();
-  try{localStorage.setItem('wildlands-save',JSON.stringify(data));this.onUI({type:'saved'});}catch{}}
+  try{localStorage.setItem('wildlands-save',JSON.stringify(data));this.onUI({type:'saved'});}catch{}
  }
  loadLocal(){
   try{const d=JSON.parse(localStorage.getItem('wildlands-save')||'null');if(d)this.applySnapshot(d);}catch{}
