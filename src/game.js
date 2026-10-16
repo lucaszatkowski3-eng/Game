@@ -11,7 +11,7 @@ export class WildlandsGame{
   this.camera=new THREE.PerspectiveCamera(this.settings.fov,innerWidth/innerHeight,.1,650);this.camera.position.set(0,2,10);
   this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
   this.clock=new THREE.Clock();this.keys={};this.objects=[];this.resources={wood:0,stone:0,berries:0};this.stats={health:100,hunger:100,thirst:100};this.dayTime=.32;this.day=1;this.elapsed=0;this.started=false;this.paused=true;this.selected=0;this.fireBuilt=false;this.lastUI=0;this.toastUntil=0;this.lastGather=null;this.velocityY=0;this.onGround=true;this.yaw=0;this.pitch=0;this.pointerLocked=false;this.worldSeed=427;
-  this.cloudReady=false;this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();
+  this.cloudReady=false;this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();if(localStorage.getItem('wildlands-nimbase-api-key'))setTimeout(()=>this.syncCloud(),700);
  }
  loadPreferences(){try{const p=JSON.parse(localStorage.getItem('wildlands-preferences')||'null');if(p){Object.assign(this.settings,p.settings||{});Object.assign(this.controls,p.controls||{});}}catch{}}
  savePreferences(){try{localStorage.setItem('wildlands-preferences',JSON.stringify({settings:this.settings,controls:this.controls}));}catch{}}
