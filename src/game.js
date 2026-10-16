@@ -6,12 +6,16 @@ const terrainHeight=(x,z)=>{const d=Math.sqrt(x*x+z*z);return Math.sin(x*.055)*1
 
 export class WildlandsGame{
  constructor(canvas,onUI){
-  this.canvas=canvas;this.onUI=onUI;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#9ab6b6');this.scene.fog=new THREE.FogExp2('#9ab6b6',.0065);
-  this.camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.1,650);this.camera.position.set(0,2,10);
+  this.canvas=canvas;this.onUI=onUI;this.controls={forward:'KeyW',backward:'KeyS',left:'KeyA',right:'KeyD',sprint:'ShiftLeft',jump:'Space',gather:'KeyE',build:'KeyF',eat:'KeyQ',pause:'Escape'};this.settings={sensitivity:1,invertY:false,headBob:true,fov:72};this.loadPreferences();this.moveVelocity=new THREE.Vector3();this.bobTime=0;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#9ab6b6');this.scene.fog=new THREE.FogExp2('#9ab6b6',.0065);
+  this.camera=new THREE.PerspectiveCamera(this.settings.fov,innerWidth/innerHeight,.1,650);this.camera.position.set(0,2,10);
   this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
   this.clock=new THREE.Clock();this.keys={};this.objects=[];this.resources={wood:0,stone:0,berries:0};this.stats={health:100,hunger:100,thirst:100};this.dayTime=.32;this.day=1;this.elapsed=0;this.started=false;this.paused=true;this.selected=0;this.fireBuilt=false;this.lastUI=0;this.toastUntil=0;this.lastGather=null;this.velocityY=0;this.onGround=true;this.yaw=0;this.pitch=0;this.pointerLocked=false;this.worldSeed=427;
   this.makeLighting();this.makeTerrain();this.makeWater();this.makeForest();this.makeSkyDetails();this.makePlayer();this.bind();this.loadLocal();this.animate();
  }
+ loadPreferences(){try{const p=JSON.parse(localStorage.getItem('wildlands-preferences')||'null');if(p){Object.assign(this.settings,p.settings||{});Object.assign(this.controls,p.controls||{});}}catch{}}
+ savePreferences(){try{localStorage.setItem('wildlands-preferences',JSON.stringify({settings:this.settings,controls:this.controls}));}catch{}}
+ setSetting(key,value){if(!(key in this.settings))return;this.settings[key]=value;if(key==='fov'){this.camera.fov=value;this.camera.updateProjectionMatrix();}this.savePreferences();}
+ setBinding(action,code){if(!(action in this.controls))return;this.controls[action]=code;this.keys={};this.savePreferences();}
  makeLighting(){
   this.ambient=new THREE.HemisphereLight('#d8e8e5','#36432e',1.6);this.scene.add(this.ambient);
   this.sun=new THREE.DirectionalLight('#ffe5b4',3.2);this.sun.position.set(-70,110,-45);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);this.sun.shadow.camera.left=-90;this.sun.shadow.camera.right=90;this.sun.shadow.camera.top=90;this.sun.shadow.camera.bottom=-90;this.sun.shadow.bias=-.00025;this.scene.add(this.sun);this.scene.add(this.sun.target);
@@ -59,9 +63,9 @@ export class WildlandsGame{
  }
  bind(){
   this.onKeyDown=e=>{this.keys[e.code]=true;if(['Space','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();if(e.repeat)return;
-   if(e.code==='Escape'){this.togglePause();}if(e.code==='KeyE')this.gather();if(e.code==='KeyF')this.buildFire();if(e.code==='KeyQ')this.eatBerries();if(/^Digit[1-5]$/.test(e.code)){this.selected=Number(e.code.slice(-1))-1;this.updateUI();}
+   if(e.code===this.controls.pause){this.togglePause();}if(e.code===this.controls.gather)this.gather();if(e.code===this.controls.build)this.buildFire();if(e.code===this.controls.eat)this.eatBerries();if(/^Digit[1-5]$/.test(e.code)){this.selected=Number(e.code.slice(-1))-1;this.updateUI();}
   };this.onKeyUp=e=>this.keys[e.code]=false;
-  this.onMouse=e=>{if(!this.pointerLocked||this.paused)return;this.yaw-=e.movementX*.0022;this.pitch=clamp(this.pitch-e.movementY*.0018,-1.35,1.35);this.player.rotation.y=this.yaw;this.camera.rotation.x=this.pitch;};
+  this.onMouse=e=>{if(!this.pointerLocked||this.paused)return;this.yaw-=e.movementX*.0022*this.settings.sensitivity;this.pitch=clamp(this.pitch+(this.settings.invertY?1:-1)*e.movementY*.0018*this.settings.sensitivity,-1.35,1.35);this.player.rotation.y=this.yaw;this.camera.rotation.x=this.pitch;};
   this.onLock=()=>{this.pointerLocked=document.pointerLockElement===this.canvas;};
   this.canvas.addEventListener('click',()=>{if(this.started&&!this.paused)this.canvas.requestPointerLock?.();});
   document.addEventListener('keydown',this.onKeyDown);document.addEventListener('keyup',this.onKeyUp);document.addEventListener('mousemove',this.onMouse);document.addEventListener('pointerlockchange',this.onLock);window.addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);});
@@ -93,9 +97,9 @@ export class WildlandsGame{
  }
  updateMovement(dt){
   if(!this.started||this.paused)return;const forward=new THREE.Vector3(-Math.sin(this.yaw),0,-Math.cos(this.yaw)),right=new THREE.Vector3(Math.cos(this.yaw),0,-Math.sin(this.yaw));const move=new THREE.Vector3();
-  if(this.keys.KeyW||this.keys.ArrowUp)move.add(forward);if(this.keys.KeyS||this.keys.ArrowDown)move.sub(forward);if(this.keys.KeyD||this.keys.ArrowRight)move.add(right);if(this.keys.KeyA||this.keys.ArrowLeft)move.sub(right);
-  if(move.lengthSq()>0){move.normalize();const speed=(this.keys.ShiftLeft||this.keys.ShiftRight)?10:5.4;this.player.position.addScaledVector(move,speed*dt);this.player.position.x=clamp(this.player.position.x,-118,118);this.player.position.z=clamp(this.player.position.z,-118,118);}
-  if(this.keys.Space&&this.onGround){this.velocityY=7;this.onGround=false;}this.velocityY-=18*dt;this.player.position.y+=this.velocityY*dt;const floor=terrainHeight(this.player.position.x,this.player.position.z)+1.65;if(this.player.position.y<floor){this.player.position.y=floor;this.velocityY=0;this.onGround=true;}
+  if(this.keys[this.controls.forward]||this.keys.ArrowUp)move.add(forward);if(this.keys[this.controls.backward]||this.keys.ArrowDown)move.sub(forward);if(this.keys[this.controls.right]||this.keys.ArrowRight)move.add(right);if(this.keys[this.controls.left]||this.keys.ArrowLeft)move.sub(right);
+  const moving=move.lengthSq()>0;if(moving)move.normalize();const sprinting=Boolean(this.keys[this.controls.sprint]||this.keys.ShiftRight);const targetVelocity=move.multiplyScalar(sprinting?10:5.4);this.moveVelocity.lerp(targetVelocity,Math.min(1,dt*10));this.player.position.addScaledVector(this.moveVelocity,dt);this.player.position.x=clamp(this.player.position.x,-118,118);this.player.position.z=clamp(this.player.position.z,-118,118);this.bobTime+=dt*(sprinting?13:9)*Math.min(1,this.moveVelocity.length()/3);this.camera.fov=THREE.MathUtils.damp(this.camera.fov,sprinting&&moving?this.settings.fov+5:this.settings.fov,7,dt);this.camera.updateProjectionMatrix();if(this.settings.headBob&&!this.paused){this.camera.position.y=.03+(moving?Math.sin(this.bobTime)*.035*Math.min(1,this.moveVelocity.length()/3):0);this.camera.position.x=moving?Math.cos(this.bobTime*.5)*.012*Math.min(1,this.moveVelocity.length()/3):0;}else{this.camera.position.y=.03;this.camera.position.x=0;}
+  if(this.keys[this.controls.jump]&&this.onGround){this.velocityY=7;this.onGround=false;}this.velocityY-=18*dt;this.player.position.y+=this.velocityY*dt;const floor=terrainHeight(this.player.position.x,this.player.position.z)+1.65;if(this.player.position.y<floor){this.player.position.y=floor;this.velocityY=0;this.onGround=true;}
   this.dayTime=(this.dayTime+dt/600)%1;if(this.dayTime<.0001)this.day++;this.elapsed+=dt;
  }
  updateEnvironment(){
@@ -117,6 +121,6 @@ export class WildlandsGame{
  }
  reset(){localStorage.removeItem('wildlands-save');location.reload();}
  animate=()=>{requestAnimationFrame(this.animate);const dt=Math.min(this.clock.getDelta(),.05);this.updateMovement(dt);this.updateSurvival(dt);this.updateEnvironment();if(this.waterGeo){const p=this.waterGeo.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,Math.sin(x*.045+this.elapsed)*.09+Math.cos(z*.06+this.elapsed*.7)*.07);}p.needsUpdate=true;this.waterGeo.computeVertexNormals();}
-  const near=this.nearest();const t=performance.now();if(t-this.lastUI>220){this.lastUI=t;this.updateUI();}this.renderer.render(this.scene,this.camera);
+  for(const o of this.objects){if(o.userData.kind==='tree'&&!o.userData.collected){o.rotation.z=Math.sin(this.elapsed*.65+o.position.x*.11+o.position.z*.07)*.006;}}const near=this.nearest();const t=performance.now();if(t-this.lastUI>220){this.lastUI=t;this.updateUI();}this.renderer.render(this.scene,this.camera);
  };
 }
